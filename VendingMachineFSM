@@ -1,0 +1,416 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity VendingMachineFSM is
+    Port ( Clock : in  STD_LOGIC;
+           Reset : in  STD_LOGIC;
+           CoinReturn_Button : in  STD_LOGIC;
+           Nickel_Button, Dime_Button, Quarter_Button : in  STD_LOGIC;
+           Gum_Button, Apple_Button,  Yogurt_Button : in  STD_LOGIC;	 
+           Dispense_Gum, Dispense_Apple, Dispense_Yogurt  : out  STD_LOGIC;
+           D_G_Motor_Signal, D_A_Motor_Signal, D_Y_Motor_Signal : out STD_LOGIC; 
+           Credit_Output : out  STD_LOGIC_VECTOR(5 downto 0);
+		   Change_Output : out  STD_LOGIC_VECTOR(5 downto 0);
+		   Count_Down : out std_logic_vector(5 downto 0));
+end VendingMachineFSM;
+
+architecture Behavioral of VendingMachineFSM is
+
+Type state_type is (S_Start, S_init, S_Wait, 
+                    S_nickel, S_nickel2, S_dime, S_dime2, S_quarter, S_quarter2, 
+                    S_Gum, S_Apple, S_Yogurt, 
+                    D_Gum, D_Apple, D_Yogurt, 
+                    Coin_Return, Coin_Return1, Coin_Extra, Coin_Extra1);
+
+Signal state : state_type;
+
+signal temporal: STD_LOGIC;
+signal counter : integer range 0 to 2 := 0;
+
+begin
+next_state_logic : PROCESS (Clock, Reset)
+variable credit : integer := 0;
+begin
+    if (Reset = '1') THEN
+            state <= S_Start;
+    elsif (Clock'EVENT AND Clock = '1') THEN
+CASE state IS
+    WHEN S_Start =>
+           state <= S_init;
+
+    WHEN S_init =>
+        if (credit = 0) then
+            Change_Output <= "111000";
+            Credit_Output <= "111000";
+            Count_Down <= "111111";
+            state <= S_Wait;
+        elsif (credit > 0) then
+            state <= Coin_Return;
+        end if;
+                	
+		Dispense_Gum <= '0';
+		Dispense_Apple <= '0';
+		Dispense_Yogurt <= '0';
+	    
+	    
+	    temporal <= '0';
+        counter <= 0;
+	    D_G_Motor_Signal <= '0';
+	    D_A_Motor_Signal <= '0';
+	    D_Y_Motor_Signal <= '0';
+	    
+-- CoinReturn Below		
+    WHEN Coin_Return =>
+		if (credit > 0) then
+			state <= Coin_Return1;
+	    elsif (credit = 0) then
+			state <= S_Wait; 
+		end if;
+		
+Credit_Output <= "111111"; -- turn off credit in this area
+   
+		if credit = 0 then
+            Change_Output <= "111000";
+            Count_Down <= "111000"; -- 0
+            credit := credit - 5;
+        elsif credit = 5 then
+            Change_Output <= "000101";
+            Count_Down <= "111101"; --1
+            credit := credit - 5;
+        elsif credit = 10 then
+            Change_Output <= "001010";
+            Count_Down <= "111001"; --2
+            credit := credit - 5;
+        elsif credit = 15 then
+            Change_Output <= "001111";
+            Count_Down <= "111010"; --3
+            credit := credit - 5;
+        elsif credit = 20 then
+            Change_Output <= "010100";
+            Count_Down <= "111100"; --4
+            credit := credit - 5;
+        elsif credit = 25 then
+            Change_Output <= "011001";
+            Count_Down <= "111110"; --5
+            credit := credit - 5;
+        elsif credit = 30 then
+            Change_Output <= "011110";
+        elsif credit = 35 then
+            Change_Output <= "100011";
+        elsif credit = 40 then
+            Change_Output <= "101000";
+        elsif credit = 45 then
+            Change_Output <= "101101";
+        elsif credit = 50 then
+            Change_Output <= "110010";
+        end if;
+		
+    WHEN Coin_Return1 =>
+        if (credit > 0) then
+            state <= Coin_Return;
+        elsif (credit = 0) then
+                state <= S_Wait;
+        end if;	
+	
+Credit_Output <= "111111"; -- turn off credit in this area
+	
+	
+        if credit = 0 then
+            Change_Output <= "111000";
+            Count_Down <= "111000"; -- 0
+        elsif credit = 5 then
+            Change_Output <= "000101";
+            Count_Down <= "111101"; --1
+        elsif credit = 10 then
+            Change_Output <= "001010";
+            Count_Down <= "111001"; --2
+        elsif credit = 15 then
+            Change_Output <= "001111";
+            Count_Down <= "111010"; --3
+        elsif credit = 20 then
+            Change_Output <= "010100";
+            Count_Down <= "111100"; --4
+        elsif credit = 25 then
+            Change_Output <= "011001";
+            Count_Down <= "111110"; --5
+        elsif credit = 30 then
+            Change_Output <= "011110";
+        elsif credit = 35 then
+            Change_Output <= "100011";
+        elsif credit = 40 then
+            Change_Output <= "101000";
+        elsif credit = 45 then
+            Change_Output <= "101101";
+        elsif credit = 50 then
+            Change_Output <= "110010";
+        end if;
+                
+-- CoinReturn Above	
+	
+		WHEN S_Wait =>
+		if ((credit <= 25) AND (CoinReturn_Button = '0')) then
+			    state <= Coin_Return;
+        elsif (credit > 25) then
+                state <= Coin_Extra;
+        
+        elsif ((Quarter_Button = '0') AND (Nickel_Button = '1') AND (Dime_Button = '1') AND (CoinReturn_Button = '1') ) then   --Money.
+                state <= S_quarter;
+        elsif ((Nickel_Button = '0') AND (Quarter_Button = '1') AND (Dime_Button = '1') AND (CoinReturn_Button = '1') ) then   --Money
+                state <= S_nickel;
+        elsif ((Dime_Button = '0') AND (Quarter_Button = '1') AND (Nickel_Button = '1') AND (CoinReturn_Button = '1') ) then   --Money
+                state <= S_dime;
+        elsif ((Gum_Button = '0') AND (Apple_Button = '1') AND (Yogurt_Button = '1') ) then --Item
+                state <= S_Gum;
+        elsif ((Apple_Button = '0') AND (Gum_Button = '1') AND (Yogurt_Button = '1') ) then --Item
+                state <= S_Apple;
+        elsif ((Yogurt_Button = '0') AND (Gum_Button = '1') AND (Apple_Button = '1') ) then --Item
+                state <= S_Yogurt;
+        else 
+                state <= S_Wait;
+
+Change_Output <= "111111";
+Count_Down <= "111111"; 
+	
+        if credit = 0 then
+            Credit_Output <= "000000";
+        elsif credit = 5 then
+            Credit_Output <= "000101";
+        elsif credit = 10 then
+            Credit_Output <= "001010";
+        elsif credit = 15 then
+            Credit_Output <= "001111";
+        elsif credit = 20 then
+            Credit_Output <= "010100";
+        elsif credit = 25 then
+            Credit_Output <= "011001";
+        elsif credit = 30 then
+            Credit_Output <= "011110";
+        elsif credit = 35 then
+            Credit_Output <= "100011";
+        elsif credit = 40 then
+            Credit_Output <= "101000";
+        elsif credit = 45 then
+            Credit_Output <= "101101";
+        elsif credit = 50 then
+            Credit_Output <= "110010";
+        end if;
+end if;
+
+--Coin Extras	
+    WHEN Coin_Extra => 
+    
+Credit_Output <= "111111"; -- turn off credit in this area
+
+		if credit = 25 then  -- changes here
+            Change_Output <= "011001";
+            Count_Down <= "111000"; -- 0
+            state <= S_Wait;
+        elsif credit = 30 then
+            Change_Output <= "011110";
+            credit := credit - 5;
+            Count_Down <= "111101"; --1
+        elsif credit = 35 then
+            Change_Output <= "100011";
+            credit := credit - 5;
+            Count_Down <= "111001"; --2
+        elsif credit = 40 then
+            Change_Output <= "101000";
+            credit := credit - 5;
+            Count_Down <= "111010"; --3
+        elsif credit = 45 then
+            Change_Output <= "101101";
+            credit := credit - 5;
+            Count_Down <= "111100"; --4
+        elsif credit = 50 then
+            Change_Output <= "110010";
+            credit := credit - 5;
+            Count_Down <= "111110"; --5
+        end if;
+    
+		
+    WHEN Coin_Extra1 =>
+    
+Change_Output <= "110010";
+
+		if (credit > 25) then
+		    credit := credit - 5;
+			state <= Coin_Extra;
+	    elsif (credit = 25) then
+			state <= S_Wait;
+		end if;
+		
+Credit_Output <= "111111"; -- turn off credit in this area;
+
+		if credit = 25 then  -- changes here
+            Change_Output <= "011001";
+            Count_Down <= "111000"; -- 0
+        elsif credit = 30 then
+            Change_Output <= "011110";
+            Count_Down <= "111101"; --1
+        elsif credit = 35 then
+            Change_Output <= "100011";
+            Count_Down <= "111001"; --2
+        elsif credit = 40 then
+            Change_Output <= "101000";
+            Count_Down <= "111010"; --3
+        elsif credit = 45 then
+            Change_Output <= "101101";
+            Count_Down <= "111100"; --4
+        elsif credit = 50 then
+            Change_Output <= "110010";
+            Count_Down <= "111110"; --5
+        end if;
+        
+--Coin Extras		
+--Quarter Section Below
+    WHEN S_quarter =>
+		if (Quarter_Button = '0') then
+			state <= S_quarter;
+	    elsif (Quarter_Button = '1') then
+			state <= S_quarter2;
+		end if;
+		
+    WHEN S_quarter2 =>
+		credit := credit + 25;
+		state <= S_Wait;	
+--Quarter Section Above
+
+--Nickel Section Below		
+    WHEN S_nickel =>
+        if (Nickel_Button = '0') then 
+			state <= S_nickel;
+        elsif (Nickel_Button = '1') then
+			state <= S_nickel2;
+	end if;
+		
+    WHEN S_nickel2 =>
+		credit := credit + 5;
+		state <= S_Wait;
+--Nickel Section Above
+
+--Dime Section Below
+	WHEN S_dime =>
+		if (Dime_Button = '0') then
+			state <= S_dime;
+	elsif (Dime_Button = '1') then
+			state <= S_dime2;
+	end if;
+		
+	WHEN S_dime2 => 
+	   credit := credit + 10;
+	   state <= S_Wait;		
+--Dime Section Above
+
+--Gum Section Below
+	WHEN S_Gum =>		
+	   if ((Gum_Button = '1') AND (credit >= 15)) then
+			state <= D_Gum;
+	   elsif ((Gum_Button = '1') AND (credit < 15)) then
+			state <= S_Wait;
+	   elsif (Gum_Button = '0') then
+			state <= S_Gum;
+	   end if;
+--Gum Section Above
+
+--Apple Section Below
+	WHEN S_Apple =>
+	   if (Apple_Button = '0') then
+			state <= S_Apple;
+       elsif ((Apple_Button = '1') AND (credit >= 20)) then
+			state <= D_Apple;
+       elsif ((Apple_Button = '1') AND (credit < 20)) then
+			state <= S_Wait;
+	   end if;
+--Apple Section Above
+
+--Yogurt Section Below
+
+	WHEN S_Yogurt =>
+	   if (Yogurt_Button = '0') then
+			state <= S_Yogurt;
+        elsif ((Yogurt_Button = '1') AND (credit = 25)) then
+			state <= D_Yogurt;
+        elsif ((Yogurt_Button = '1') AND (credit < 25)) then
+	   		state <= S_Wait;
+        end if;
+--Yogurt Section Above
+		
+	WHEN D_Gum =>	
+	
+        if (counter = 2) then
+                temporal <= NOT(temporal);
+                counter <= 0;
+-----------------------------------
+                       if credit = 25 then
+                             Credit_Output <= "111111";
+                             Change_Output <= "001010";
+                             Count_Down <= "111001"; --2
+                             credit := credit - 15;
+                         elsif credit = 15 then
+                             credit := credit - 15;
+                         elsif credit = 20 then
+                             Credit_Output <= "111111";
+                             Change_Output <= "000101";
+                             Count_Down <= "111101";
+                             credit := credit - 15;
+                         end if;  
+                   
+                   		state <= S_init; 
+----------------------------------------------------------	
+		else
+                counter <= counter + 1;
+                
+                Dispense_Gum <= '1';
+                D_G_Motor_Signal <= '1';  
+            end if;
+		
+    WHEN D_Apple =>
+    
+          if (counter = 2) then
+                temporal <= NOT(temporal);
+                counter <= 0;
+                    -------------
+                        if credit = 20 then 
+                            Change_Output <= "111000";
+                            Credit_Output <= "111111";
+                            Count_Down <= "111000";
+                            credit := credit - 20;
+                        elsif credit > 20 then
+                            Credit_Output <= "111111";
+                            Change_Output <= "000101";
+                            Count_Down <= "111101"; --1
+                            credit := credit - 20;
+                        end if;
+                        
+                        state <= S_init;
+                    ----------------
+	   else
+             counter <= counter + 1;
+             
+             Dispense_Apple <= '1';
+	         D_A_Motor_Signal <= '1';  
+            end if;
+            
+            
+	WHEN D_Yogurt =>
+               
+        if (counter = 2) then
+                temporal <= NOT(temporal);
+                counter <= 0;
+                
+                credit := credit - 25;
+                Count_Down <= "111000"; -- 0
+                state <= S_init;	
+            else
+                counter <= counter + 1;
+                
+                Dispense_Yogurt <= '1';
+                D_Y_Motor_Signal <= '1';  
+            end if;
+            
+        
+end case;
+end if;
+end Process;
+end Behavioral;
