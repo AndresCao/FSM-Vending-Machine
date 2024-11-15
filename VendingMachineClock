@@ -1,0 +1,39 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity VendingMachineClock is
+    Port ( CLK100MHZ : in STD_LOGIC;
+           Reset : in STD_LOGIC;
+           Clk1HzOut, NotClk1HzOut : out STD_LOGIC);
+end VendingMachineClock;
+
+architecture Behavioral of VendingMachineClock is
+
+CONSTANT Max : INTEGER := 100000000;
+CONSTANT Half : INTEGER := Max/2;
+SIGNAL Counter : INTEGER RANGE 0 TO Max;
+
+begin                                   --Clock 1HZ
+	Process (CLK100MHZ, Reset)
+		begin
+		
+		  If (Reset = '1') then
+		      Counter <= 0;
+		
+	      elsIf (CLK100MHZ'EVENT AND CLK100MHZ = '1') THEN
+			If Counter < Max then
+			     Counter <= Counter + 1;
+	         else
+			     Counter <= 0;
+		    end If;
+		
+	       If Counter < Half then 
+		      Clk1HzOut <= '0';
+		      NotClk1HzOut <= '1';
+	       else
+		      Clk1HzOut <= '1';
+		      NotClk1HzOut <= '0';
+           end If;                        --Clock for 1hz
+         end If;
+    end process;
+end Behavioral;
