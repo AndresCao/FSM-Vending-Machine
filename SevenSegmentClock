@@ -1,0 +1,35 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity SevenSegmentClock is
+    Port ( CLK100MHZ : in  STD_LOGIC;
+           Reset : in  STD_LOGIC;
+		   Clk1KHz : out STD_LOGIC);
+end SevenSegmentClock;
+
+architecture Behavioral of SevenSegmentClock is     --Clock 1KHz
+CONSTANT Max : INTEGER := 100000000;
+CONSTANT Half : INTEGER := Max/2;
+SIGNAL Counter : INTEGER RANGE 0 TO Max;
+
+begin
+	Process (CLK100MHZ, Reset)
+		begin
+		  if (Reset = '1') then
+		      Counter <= 0;
+		  elsif (CLK100MHZ'EVENT AND CLK100MHZ = '1') THEN
+			if Counter < Max then
+			 Counter <= Counter + 1000;
+	        else
+			 Counter <= 0;
+		  end if;
+			
+	      if Counter < Half then 
+		      Clk1KHz <= '0';
+	       else
+		      Clk1KHz <= '1';
+          end if;
+        end if;                                    --Clock for 1KHz
+    end process;
+end Behavioral;
