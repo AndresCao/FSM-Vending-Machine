@@ -1,0 +1,205 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity SevenSegmentDriver is
+    Port ( Clock : in  STD_LOGIC;
+           Reset : in  STD_LOGIC;
+           Gum_Display : in  STD_LOGIC;
+           Apple_Display : in  STD_LOGIC;
+		   Yogurt_Display : in STD_LOGIC;
+           Credit : in  STD_LOGIC_VECTOR(5 downto 0);
+           Change : in  STD_LOGIC_VECTOR(5 downto 0);
+           Count_Down : in std_logic_vector(5 downto 0);
+           Segment_Display : out  STD_LOGIC_VECTOR(7 downto 0);
+           Segment_Board : out  STD_LOGIC_VECTOR(7 downto 0));
+end SevenSegmentDriver;
+
+architecture Behavioral of SevenSegmentDriver is
+
+Type state_type is (S_letter, S_P1, S_P2, S_Z1, S_Z2, S_5, S_6, S_7);
+
+Signal state : state_type;
+
+begin
+next_state_logic : process (Clock, Reset) -- Next State Logic ===============================
+begin
+    if (Reset = '1') THEN
+        state <= S_letter;
+    elsif (Clock'EVENT AND Clock = '1') THEN
+    case state is		
+        WHEN S_letter =>
+             state <= S_P1;			
+        WHEN S_P1 =>
+             state <= S_P2;
+        WHEN S_P2 =>
+             state <= S_Z1;
+        WHEN S_Z1 =>
+             state <= S_Z2;
+        WHEN S_Z2 =>
+             state <= S_5;
+        WHEN S_5 =>
+             state <= S_6;
+        WHEN S_6 =>
+             state <= S_7;
+        WHEN S_7 =>
+             state <= S_letter;
+    end case;
+    end if;
+end process;
+
+output_logic: process (state) -- Output ====================================================        
+begin
+    case state is
+       WHEN S_letter =>
+                Segment_Board <= "01111111";
+          if Gum_Display = '1' then
+                Segment_Display <= "10000000";
+          elsif Apple_Display = '1' then 
+                Segment_Display <= "01000000";
+          elsif Yogurt_Display = '1' then
+                Segment_Display <= "00100000";	
+          else 
+                Segment_Board <= "11111111";
+          end if;
+          
+      WHEN S_P1 =>                            --S_P1 ====================         
+           Segment_Board <= "11111101";
+            if Credit = "000000" then
+                Segment_Board <= "11111111";
+            elsif Change = "111000" then  --0
+                Segment_Display <= "00000000"; 
+            elsif Credit = "000101" then
+                 Segment_Display <= "00000000"; -- 0  
+            elsif Credit = "001010" then
+                 Segment_Display <= "00000001"; -- 1 
+            elsif Credit = "001111" then 
+                 Segment_Display <= "00000001"; -- 1 
+            elsif Credit = "010100" then 
+                 Segment_Display <= "00000100"; -- 2
+            elsif Credit = "011001" then
+                 Segment_Display <= "00000100"; -- 2
+            elsif Credit = "011110" then
+                 Segment_Display <= "00001100"; -- 3
+            elsif Credit = "100011" then
+                 Segment_Display <= "00001100"; -- 3
+            elsif Credit = "101000" then
+                 Segment_Display <= "00011100"; -- 4
+            elsif Credit = "101101" then
+                 Segment_Display <= "00011100"; -- 4
+            elsif Credit = "110010" then
+                 Segment_Display <= "00111100"; -- 5
+            else  Segment_Board <= "11111111";
+        end if;
+    
+       WHEN S_P2 =>                            --S_P2 ====================  
+            Segment_Board <= "11111110";
+           if Credit = "000000" then
+                   Segment_Board <= "11111111"; -- 0
+           elsif Change = "111000" then    
+                   Segment_Display <= "00000000"; -- 0
+           elsif Credit = "000101" then
+                  Segment_Display <= "00111100"; -- 5
+           elsif Credit = "001010" then
+                  Segment_Display <= "00000000"; -- 0
+           elsif Credit = "001111" then
+                  Segment_Display <= "00111100"; -- 5   
+           elsif Credit = "010100" then
+                  Segment_Display <= "00000000"; -- 0
+           elsif Credit = "011001" then
+                  Segment_Display <= "00111100"; -- 5
+           elsif Credit = "011110" then
+                  Segment_Display <= "00000000"; -- 0
+           elsif Credit = "100011" then
+                  Segment_Display <= "00111100"; -- 5
+           elsif Credit = "101000" then
+                  Segment_Display <= "00000000"; -- 0
+           elsif Credit = "101101" then
+                  Segment_Display <= "00111100"; -- 5
+           elsif Credit = "110010" then
+                  Segment_Display <= "00000000"; -- 0
+           else Segment_Board <= "11111111";
+           end if;
+    
+        WHEN S_Z1 =>                                --S_Z1 ====================  
+                Segment_Board <= "11110111";
+            if Change = "000000" then    --0
+                Segment_Board <= "11111111";
+            elsif Change = "111000" then --0
+                Segment_Display <= "00000000";
+            elsif Change = "000101" then --0
+                Segment_Display <= "00000000";
+            elsif Change = "001010" then -- 1 
+                Segment_Display <= "00000001";
+            elsif Change = "001111" then -- 1 
+                Segment_Display <= "00000001";
+            elsif Change = "010100" then -- 2
+                Segment_Display <= "00000100";
+            elsif Change = "011001" then -- 2
+                Segment_Display <= "00000100";
+            elsif Change = "011110" then -- 3
+                Segment_Display <= "00001100";
+            elsif Change = "100011" then -- 3
+                Segment_Display <= "00001100";
+            elsif Change = "101000" then
+                Segment_Display <= "00011100"; --4
+            elsif Change = "101101" then
+                Segment_Display <= "00011100"; --4
+            elsif Change = "110010" then
+                Segment_Display <= "00111100"; -- 5
+            else Segment_Board <= "11111111";
+            end if;
+    
+        WHEN S_Z2 =>                                   --S_Z2 ====================  
+            Segment_Board <= "11111011";
+            if Change = "000000" then 
+                Segment_Board <= "11111111";  --0   
+            elsif Change = "111000" then
+                Segment_Display <= "00000000"; --0        
+            elsif	Change = "000101" then
+                Segment_Display <= "00111100"; --5        
+            elsif Change = "001010" then
+                Segment_Display <= "00000000"; --0       
+            elsif Change = "001111" then
+                Segment_Display <= "00111100"; -- 5        
+            elsif Change = "010100" then
+                Segment_Display <= "00000000"; -- 0        
+            elsif Change = "011001" then
+                Segment_Display <= "00111100"; --  5        
+            elsif Change = "011110" then
+                Segment_Display <= "00000000"; --  0        
+            elsif Change = "100011" then
+                Segment_Display <= "00111100"; --  5        
+            elsif Change = "101000" then
+                Segment_Display <= "00000000"; --  0        
+            elsif Change = "101101" then
+                Segment_Display <= "00111100"; --  5        
+            elsif Change = "110010" then
+                Segment_Display <= "00000000"; -- 5 
+            else Segment_Board <= "11111111";
+            end if;
+        
+        WHEN S_5 =>                                    --S_5 ====================  
+            Segment_Board <= "11011111";       
+            if Count_Down = "111110" then		--5
+                Segment_Display <= "00111100";
+            elsif Count_Down = "111100" then  --4
+                Segment_Display <= "00011100";        
+            elsif Count_Down = "111010" then  --3
+                Segment_Display <= "00001100";        
+            elsif Count_Down = "111001" then -- 2 
+                Segment_Display <= "00000100";        
+            elsif Count_Down = "111101" then -- 1 
+                Segment_Display <= "00000001";        
+            elsif Count_Down = "111000" then
+                Segment_Display <= "00000000"; --0        
+            else Segment_Board <= "11111111";       
+            end if;
+        
+        WHEN S_6 =>                                --S_6 ====================  
+            Segment_Board <= "11111111";		
+        WHEN S_7 =>                                --S_7 ====================  
+            Segment_Board <= "11111111";
+    end case;
+    end process;
+end Behavioral;
