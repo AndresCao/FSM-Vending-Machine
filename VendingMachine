@@ -1,0 +1,156 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use ieee.std_logic_unsigned;
+
+entity VendingMachine is
+    Port ( CLK100MHZ : in STD_LOGIC; --Clock Signal from FGPA
+           Reset : in STD_LOGIC;
+           CoinReturn_Button : in STD_LOGIC;
+           Nickel_Button : in STD_LOGIC;
+           Dime_Button : in STD_LOGIC;
+           Quarter_Button : in STD_LOGIC;
+           Gum_Button : in STD_LOGIC;
+           Apple_Button : in STD_LOGIC;
+           Yogurt_Button : in STD_LOGIC;
+           CA, CB, CC, CD, CE, CF, CG: out std_logic;
+           Segment_Board : out std_logic_vector(7 downto 0);
+           Led0, Led1, Led2, Led3, Led4, Led5, Led6, Led7, Led8, Led9, Led10, Led11, Led12, Led13, Led14, Led15 : out std_logic;
+           JA1, JA2, JA3 : OUT STD_LOGIC);
+end VendingMachine;
+
+architecture Behavioral of VendingMachine is
+
+component VendingMachineFSM is
+    Port ( Clock : in  STD_LOGIC;
+           Reset : in  STD_LOGIC;
+           CoinReturn_Button : in STD_LOGIC;
+           Nickel_Button, Dime_Button, Quarter_Button : in  STD_LOGIC;
+           Gum_Button, Apple_Button, Yogurt_Button : in  STD_LOGIC; 
+           Dispense_Gum, Dispense_Apple, Dispense_Yogurt  : out  STD_LOGIC;
+           D_G_Motor_Signal, D_A_Motor_Signal, D_Y_Motor_Signal : out  STD_LOGIC;
+           Credit_Output : out  STD_LOGIC_VECTOR(5 downto 0);
+		   Change_Output : out  STD_LOGIC_VECTOR(5 downto 0);
+		   Count_Down : out std_logic_vector(5 downto 0));
+end component;
+
+component VendingMachineClock is
+    Port ( CLK100MHZ : in STD_LOGIC;
+           Reset : in STD_LOGIC;
+           Clk1HzOut : out STD_LOGIC;
+           NotClk1HzOuT : out STD_LOGIC);
+end component;
+
+component SevenSegmentClock is
+    Port ( CLK100MHZ : in  STD_LOGIC;
+           Reset : in  STD_LOGIC;
+		   Clk1KHz : out STD_LOGIC);
+end component;
+
+component SevenSegmentDecoder is
+    Port ( Segmentdisplay : in  STD_LOGIC_VECTOR (7 downto 0);
+           a_to_g : out  STD_LOGIC_VECTOR (6 downto 0));
+end component;
+
+component SevenSegmentDriver is
+    Port ( Clock : in  STD_LOGIC;
+           Reset : in  STD_LOGIC;
+           Gum_Display : in  STD_LOGIC;
+           Apple_Display : in  STD_LOGIC;
+		   Yogurt_Display : in STD_LOGIC;
+           Credit : in  STD_LOGIC_VECTOR(5 downto 0);
+           Change : in  STD_LOGIC_VECTOR(5 downto 0);
+           Count_Down : in std_logic_vector(5 downto 0);
+           Segment_Display : out  STD_LOGIC_VECTOR(7 downto 0);
+           Segment_Board : out  STD_LOGIC_VECTOR(7 downto 0));
+end component;
+
+
+signal Clk1Hz_Signal : std_logic;
+signal Clk1KHz_Signal : std_logic;
+signal D_Gum_Signal, D_Apple_Signal, D_Yogurt_Signal : std_logic;
+signal Credit_Signal : std_logic_vector(5 downto 0);
+signal Change_Signal : std_logic_vector(5 downto 0);
+signal Count_Down_Signal : std_logic_vector(5 downto 0);
+signal a_to_g : std_logic_vector(6 downto 0);
+signal Seven_Segment_Signal : std_logic_vector(7 downto 0);
+SIgNAL NotClk1HzOut_Signal : std_logic;
+signal D_G_Motor_Signal, D_A_Motor_Signal, D_Y_Motor_Signal : std_logic;
+
+begin
+
+VM1 : VendingMachineFSM port map(Clock => Clk1Hz_Signal, 
+                                 Reset => Reset,
+                                 CoinReturn_Button => CoinReturn_Button, 
+                                 Nickel_Button => Nickel_Button, 
+                                 Dime_Button => Dime_Button, 
+                                 Quarter_Button => Quarter_Button, 
+                                 Gum_Button => Gum_Button,  
+                                 Apple_Button => Apple_Button,
+                                 Yogurt_Button => Yogurt_Button, 
+                                 Dispense_Gum => D_Gum_Signal, 
+                                 Dispense_Apple => D_Apple_Signal, 
+                                 Dispense_Yogurt => D_Yogurt_Signal,
+                                 D_G_Motor_Signal => D_G_Motor_Signal,
+                                 D_A_Motor_Signal => D_A_Motor_Signal,
+                                 D_Y_Motor_Signal => D_Y_Motor_Signal,
+                                 Credit_Output => Credit_Signal, 
+                                 Change_Output => Change_Signal, 
+                                 Count_Down => Count_Down_Signal);
+                                             
+VMClock1 : VendingMachineClock port map (CLK100MHZ => CLK100MHZ, 
+                                         Reset => Reset, 
+                                         Clk1HzOut => Clk1Hz_Signal,
+                                         NotClk1HzOut => NotClk1HzOut_Signal);
+                                                                                           
+SSClock1 : SevenSegmentClock port map (CLK100MHZ => CLK100MHZ, 
+                                       Reset => Reset, 
+                                       Clk1KHz => Clk1KHz_Signal);
+                                                 
+SSDriver1 : SevenSegmentDriver port map (Clock => Clk1KHz_Signal, 
+                                         Reset => Reset, 
+                                         Gum_Display => D_Gum_Signal, 
+                                         Apple_Display => D_Apple_Signal, 
+                                         Yogurt_Display => D_Yogurt_Signal, 
+                                         Credit => Credit_Signal, 
+                                         Change => Change_Signal, 
+                                         Count_Down => Count_Down_Signal, 
+                                         Segment_Display => Seven_Segment_Signal, 
+                                         Segment_Board => Segment_Board);
+                                                   
+SSDecoder1 : SevenSegmentDecoder port map(Segmentdisplay => Seven_Segment_Signal, 
+                                          a_to_g => a_to_g);
+                                                          
+                                                 
+Display : 
+    process (a_to_g)
+        begin
+            CA <= a_to_g(6);
+            CB <= a_to_g(5);
+            CC <= a_to_g(4);
+            CD <= a_to_g(3);
+            CE <= a_to_g(2);
+            CF <= a_to_g(1);
+            CG <= a_to_g(0);
+            
+        Led0 <= Clk1hz_Signal; 
+        Led1 <= NotClk1HzOut_Signal;
+        Led2 <= Clk1hz_Signal; 
+        Led3 <= NotClk1HzOut_Signal; 
+        Led4 <= Clk1hz_Signal; 
+        Led5 <= NotClk1HzOut_Signal; 
+        Led6 <= Clk1hz_Signal; 
+        Led7 <= NotClk1HzOut_Signal; 
+        Led8 <= Clk1hz_Signal; 
+        Led9 <= NotClk1HzOut_Signal; 
+        Led10 <= Clk1hz_Signal; 
+        Led11 <= NotClk1HzOut_Signal;
+        Led12 <= Clk1hz_Signal;
+        Led13 <= NotClk1HzOut_Signal; 
+        Led14 <= Clk1hz_Signal; 
+        Led15 <= NotClk1HzOut_Signal; 
+            
+        JA1 <=  D_G_Motor_Signal;   
+        JA2 <=  D_A_Motor_Signal;
+        JA3 <=  D_Y_Motor_Signal;   
+    end process;
+end Behavioral; 
